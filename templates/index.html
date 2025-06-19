@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive Folder Structure</title>
+    <style>
+        /* General Page Layout */
+        body {
+            display: flex;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Navbar styling to hold the Toggle button, Input field, and Get Folder button */
+        .navbar {
+            display: flex;
+            align-items: center; /* Align items vertically */
+            background-color: #f1f1f1;
+            padding: 10px 20px;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        /* Align the label, input field, and buttons */
+        .input-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar label {
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .navbar input[type="text"] {
+            padding: 8px;
+            font-size: 16px;
+            margin-right: 10px;
+            width: 300px; /* Adjust as needed */
+        }
+
+        /* Style the buttons */
+        .navbar button {
+            padding: 8px 15px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: white;
+            border: 1px solid #ddd;
+            margin-right: 10px;  /* Reduced gap between buttons */
+            transition: background-color 0.3s ease, box-shadow 0.3s ease; /* Transition effect */
+        }
+
+        /* Hover effect for buttons */
+        .navbar button:hover {
+            background-color: #e0e0e0;
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Light shadow on hover */
+        }
+
+        /* Active (Click) effect for buttons */
+        .navbar button:active {
+            background-color: #d4d4d4;
+            transform: scale(0.98); /* Slightly reduce size to mimic pressed effect */
+            border-color: #bbb; /* Change border color when active */
+        }
+
+        /* Center the loading and error messages */
+        #loading-message, #error-message {
+            display: none; /* Initially hidden */
+            font-size: 18px;
+            text-align: center;
+            color: blue;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Centering trick */
+            z-index: 1000;
+        }
+
+        #loading-message {
+            color: blue;
+        }
+
+        #error-message {
+            color: red;
+        }
+
+        /* Assistance message during loading */
+        #loading-message p {
+            margin-top: 10px;
+            font-size: 16px;
+            color: #666;
+        }
+
+        /* Main content layout (left and right panels) */
+        .content {
+            display: flex;
+            height: calc(100vh - 70px); /* Full height minus navbar */
+        }
+
+        /* Left Panel */
+        #left-panel {
+            flex: 2;
+            padding: 20px;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+        }
+
+        /* Right Panel - Sticky */
+        #right-panel {
+            position: sticky;
+            top: 0;
+            flex: 1;
+            padding: 20px;
+            max-width: 345px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+        }
+
+        .file {
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .folder {
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+
+        .folder:hover {
+            background-color: #e0e0e0;
+        }
+
+        .highlight {
+            background-color: yellow;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .xlsx-file {
+            color: grey;
+        }
+
+        /* Smaller font for the Google Drive link */
+        #folder-link {
+            font-size: 14px;  /* Make link smaller */
+            margin-bottom: 20px;
+        }
+
+        #full-path {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        #login-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Navbar (Toggle button, Folder ID input, and Get Folder button in one line) -->
+    <div class="navbar">
+        <div class="input-container">
+            <label for="folder-id">Enter Google Drive Folder ID:</label>
+            <input type="text" id="folder-id" />
+            <button onclick="fetchFolderStructure()">Get Folder Structure</button>
+            <button onclick="toggleXlsxFiles()">Toggle .xlsx files</button> <!-- Moved inside input-container for better alignment -->
+            <a href="https://yurenjin.pythonanywhere.com/login"><button id="login-button">Login with Google</button></a>
+        </div>
+    </div>
+
+    <!-- Loading and Error Messages -->
+    <div id="loading-message">
+        Loading folder structure, please wait...
+        <p>Loading time may be long due to the folder structure size.</p>
+        <p>If it can't finish loading, please contact Yuren for assistance 0_0</p>
+    </div>
+    <div id="error-message">Error: Invalid folder ID or unable to retrieve the folder structure.</div>
+
+    <!-- Main content holding Left and Right Panels -->
+    <div class="content">
+        <!-- Left Panel: File structure -->
+        <div id="left-panel">
+            <h2 id="files-title">Files</h2>
+            <div id="folder-link"></div> <!-- The link will be dynamically added here -->
+            <div id="file-structure"><!-- Files will be dynamically added here --></div>
+        </div>
+
+        <!-- Right Panel: Folder Tree -->
+        <div id="right-panel">
+            <h2>Folder Structure</h2>
+            <div id="folder-structure"><!-- Folders will be dynamically added here --></div>
+            <div id="full-path">Full Path: /</div>
+        </div>
+    </div>
+
+    <!-- JavaScript for Folder Structure, Toggle, and Fetch -->
+    <script>
+        // Toggle .xlsx file visibility
+        function toggleXlsxFiles() {
+            const xlsxFiles = document.querySelectorAll('.xlsx-file');
+            xlsxFiles.forEach(file => {
+                if (file.classList.contains('hidden')) {
+                    file.classList.remove('hidden');
+                } else {
+                    file.classList.add('hidden');
+                }
+            });
+        }
+
+        // Show loading message
+        function showLoading() {
+            const loadingMessage = document.getElementById('loading-message');
+            loadingMessage.style.display = 'block';
+        }
+
+        // Hide loading message
+        function hideLoading() {
+            document.getElementById('loading-message').style.display = 'none';
+        }
+
+        // Show error message with automatic disappearance after 5 seconds
+        function showError() {
+            const errorMessage = document.getElementById('error-message');
+            errorMessage.style.display = 'block';
+            hideLoading(); // Make sure the loading message is hidden
+
+            // Automatically hide error message after 5 seconds
+            setTimeout(() => {
+                errorMessage.style.display = 'none';
+            }, 3000); // 5 seconds timeout
+        }
+
+                // Highlight the folder when clicked (Right Panel)
+        function highlightFolder(folderId) {
+            const folders = document.querySelectorAll('.folder');
+            folders.forEach(folder => folder.classList.remove('highlight'));
+            const folder = document.getElementById('right_' + folderId);
+            if (folder) {
+                folder.classList.add('highlight');
+            }
+        }
+
+        // Sync from right panel to left panel (Left Panel scrolls to view)
+        function syncToLeftPanel(folderId) {
+            const folderOnLeft = document.getElementById('left_' + folderId);
+            if (folderOnLeft) {
+                folderOnLeft.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Sync from left panel to right panel (Right Panel scrolls to view)
+        function syncFolders(folderId) {
+            highlightFolder(folderId);
+            const folderOnRight = document.getElementById('right_' + folderId);
+            if (folderOnRight) {
+                folderOnRight.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Show the full path of the clicked file/folder
+        function showFullPath(path) {
+            document.getElementById('full-path').textContent = 'Full Path: ' + path;
+        }
+
+        // Fetch folder structure dynamically from the backend
+        function fetchFolderStructure() {
+            const folderId = document.getElementById('folder-id').value;
+
+            // Show the loading message
+            showLoading();
+
+            fetch('/get-folder', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ folder_id: folderId }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Invalid folder ID");
+                }
+                return response.json();
+            })
+            .then(data => {
+                // Hide loading message once data is received
+                hideLoading();
+                
+                // Update the folder structure
+                document.getElementById('folder-structure').innerHTML = data.folder_html;
+                document.getElementById('file-structure').innerHTML = data.file_html;
+
+                // Update the link below the Files title with the Google Drive folder link
+                const folderLink = document.getElementById('folder-link');
+                folderLink.innerHTML = `<a href="https://drive.google.com/drive/folders/${folderId}" target="_blank">Open in Google Drive</a>`;
+            })
+            .catch(error => {
+                // Show the error message if the request fails
+                showError();
+            });
+        }
+    </script>
+</body>
+</html>
