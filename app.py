@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, redirect, url_for, session, send_from_directory
+from flask import Flask, request, jsonify, redirect, url_for, session, render_template
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -55,10 +55,9 @@ def authenticate_drive():
 
 @app.route('/')
 def index():
-    # Redirect to login if not authenticated
     if 'credentials' not in session:
         return redirect(url_for('login'))
-    return send_from_directory('.', 'index.html')
+    return render_template('index.html')
 
 @app.route('/login')
 def login():
