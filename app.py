@@ -20,17 +20,17 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
-# Create reusable Flow object
-flow = Flow.from_client_config({
-    "web": {
-        "client_id": GOOGLE_CLIENT_ID,
-        "client_secret": GOOGLE_CLIENT_SECRET,
-        "redirect_uris": [REDIRECT_URI],
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "scopes": SCOPES
-    }
-}, scopes=SCOPES)
+# # Create reusable Flow object
+# flow = Flow.from_client_config({
+#     "web": {
+#         "client_id": GOOGLE_CLIENT_ID,
+#         "client_secret": GOOGLE_CLIENT_SECRET,
+#         "redirect_uris": [REDIRECT_URI],
+#         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+#         "token_uri": "https://oauth2.googleapis.com/token",
+#         "scopes": SCOPES
+#     }
+# }, scopes=SCOPES)
 
 def authenticate_drive():
     creds = None
@@ -61,6 +61,17 @@ def index():
 
 @app.route('/login')
 def login():
+    flow = Flow.from_client_config({
+        "web": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uris": [REDIRECT_URI],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "scopes": SCOPES
+        }
+    }, scopes=SCOPES)
+    
     flow.redirect_uri = url_for('callback', _external=True)
     authorization_url, state = flow.authorization_url(
         access_type='offline',
