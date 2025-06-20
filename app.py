@@ -20,6 +20,9 @@ GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
 SCOPES = ['https://www.googleapis.com/auth/drive.readonly']
 
+print("🔍 [DEBUG] CURRENT REDIRECT_URI =", REDIRECT_URI)
+
+
 # # Create reusable Flow object
 # flow = Flow.from_client_config({
 #     "web": {
