@@ -82,9 +82,20 @@ def login():
 
 @app.route('/callback')
 def callback():
+    flow = Flow.from_client_config({
+        "web": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uris": [REDIRECT_URI],
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "scopes": SCOPES
+        }
+    }, scopes=SCOPES)
+    flow.redirect_uri = url_for('callback', _external=True)
+
     flow.fetch_token(authorization_response=request.url)
 
-    # Save the credentials in the session
     credentials = flow.credentials
     session['credentials'] = {
         'token': credentials.token,
