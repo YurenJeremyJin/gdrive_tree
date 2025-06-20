@@ -41,7 +41,7 @@
             padding: 8px;
             font-size: 16px;
             margin-right: 10px;
-            width: 300px; /* Adjust as needed */
+            width: 500px; /* Adjust as needed */
         }
 
         /* Style the buttons */
@@ -122,17 +122,22 @@
         }
 
         .file {
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             cursor: pointer;
         }
 
         .folder {
-            margin-bottom: 10px;
+            margin-bottom: 11px;
             cursor: pointer;
         }
 
         .folder:hover {
             background-color: #e0e0e0;
+        }
+
+        .folder-title {
+            margin-bottom: 8px;
+            cursor: pointer;
         }
 
         .highlight {
@@ -164,14 +169,46 @@
             cursor: pointer;
         }
 
+        /* Align the label, input field, and buttons */
+        .input-container {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            align-items: center;
+            width: 100%; /* Full width on mobile */
+        }
+
+        .navbar label {
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .navbar input[type="text"] {
+            padding: 8px;
+            font-size: 16px;
+            margin-right: 10px;
+            flex: 1; /* Make input field grow to fill available space */
+            min-width: 200px; /* Set a minimum width for better usability */
+        }
+
+        .folder-contents {
+            margin-left: 20px;  /* Indent the contents of the folder */
+        }
+
+        .folder-icon {
+            display: inline-block;  /* Ensure it behaves like a block element for transformations */
+            transition: transform 0.3s ease;  /* Smooth transition for rotation */
+            margin-right: 5px;  /* Add spacing between icon and folder name */
+        }
+
+
     </style>
 </head>
 <body>
     <!-- Navbar (Toggle button, Folder ID input, and Get Folder button in one line) -->
     <div class="navbar">
         <div class="input-container">
-            <label for="folder-id">Enter Google Drive Folder ID:</label>
-            <input type="text" id="folder-id" />
+            <label for="folder-id">Enter Google Drive Folder Link:</label>
+            <input type="text" id="folder-url" placeholder="https://drive.google.com/drive/folders/YOUR_FOLDER_ID" />
             <button onclick="fetchFolderStructure()">Get Folder Structure</button>
             <button onclick="toggleXlsxFiles()">Toggle .xlsx files</button> <!-- Moved inside input-container for better alignment -->
             <a href="/login"><button id="login-button">Login with Google</button></a>
@@ -188,9 +225,9 @@
 
     <!-- Main content holding Left and Right Panels -->
     <div class="content">
-        <!-- Left Panel: File structure -->
+        <!-- Left Panel: Folder and File structure -->
         <div id="left-panel">
-            <h2 id="files-title">Files</h2>
+            <h2 id="folder-heading">Folder's Name: <span id="folder-name"></span>, Version ID: <span id="version-id"></span></h2>
             <div id="folder-link"></div> <!-- The link will be dynamically added here -->
             <div id="file-structure"><!-- Files will be dynamically added here --></div>
         </div>
@@ -272,9 +309,47 @@
             document.getElementById('full-path').textContent = 'Full Path: ' + path;
         }
 
+        // Function to extract folder ID from the URL
+        function getFolderIdFromUrl(url) {
+            const regex = /[-\w]{25,}/; // Regular expression to match the folder ID
+            const matches = url.match(regex);
+            return matches ? matches[0] : null; // Return the ID if found, otherwise null
+        }
+
+        function toggleFolder(folderId, element) {
+            const contents = document.getElementById('contents_' + folderId);
+            const icon = element.querySelector('.folder-icon');
+
+            if (contents.style.display === 'block') {
+                contents.style.display = 'none';  // Hide contents
+                icon.style.transform = 'rotate(0deg)'; // Reset rotation
+            } else {
+                contents.style.display = 'block';  // Show contents
+                icon.style.transform = 'rotate(45deg)'; // Rotate to 45 degrees
+            }
+        }
+
+        function generateRealTimeID() {
+            const now = new Date();
+
+            const year = now.getFullYear(); // Get the current year
+            const month = now.toLocaleString('default', { month: 'short' }).toUpperCase(); // Get the current month as a short string and convert to uppercase
+            const day = String(now.getDate()).padStart(2, '0'); // Get the current day and pad with zero if needed
+            const hours = String(now.getHours()).padStart(2, '0'); // Get the current hours and pad with zero if needed
+            const minutes = String(now.getMinutes()).padStart(2, '0'); // Get the current minutes and pad with zero if needed
+
+            return `${year}${month}${day}${hours}${minutes}`; // Format the final ID
+        }
+
         // Fetch folder structure dynamically from the backend
         function fetchFolderStructure() {
-            const folderId = document.getElementById('folder-id').value;
+            const folderUrl = document.getElementById('folder-url').value;
+            const folderId = getFolderIdFromUrl(folderUrl); // Extract ID from URL
+
+            if (!folderId) {
+                showError(); // Show error if ID is not valid
+                return;
+            }
 
             // Show the loading message
             showLoading();
@@ -292,23 +367,30 @@
                 }
                 return response.json();
             })
+
             .then(data => {
                 // Hide loading message once data is received
                 hideLoading();
-                
-                // Update the folder structure
-                document.getElementById('folder-structure').innerHTML = data.folder_html;
-                document.getElementById('file-structure').innerHTML = data.file_html;
 
-                // Update the link below the Files title with the Google Drive folder link
-                const folderLink = document.getElementById('folder-link');
-                folderLink.innerHTML = `<a href="https://drive.google.com/drive/folders/${folderId}" target="_blank">Open in Google Drive</a>`;
+                // Update the folder structure for left and right panels
+                document.getElementById('folder-structure').innerHTML = data.folder_html_right;  // Assuming this is the right panel
+                // Update the left panel with folders and files
+                document.getElementById('file-structure').innerHTML = data.folder_html_left;  // Only files, if applicable
+                // Extract the folder name from the data
+                const folderName = data.folder_name || "Root Folder"; // Default to "Root Folder" if no name is provided
+                document.getElementById('folder-name').innerHTML = folderName; // Set the folder name in the heading
+                // Generate the version ID and set it in the heading
+                const versionID = generateRealTimeID();
+                document.getElementById('version-id').innerHTML = versionID; // Set the version ID in the heading
+                // Optionally, if you want to include links dynamically
+                document.getElementById('folder-link').innerHTML = data.folder_link || ''; // Update folder link if applicable
             })
             .catch(error => {
                 // Show the error message if the request fails
-                showError();
+                showError(error.message); // Show specific error message
             });
         }
+
     </script>
 </body>
 </html>
